@@ -9,6 +9,7 @@ static void process_file(const std::string &fileName);
 static bool encode_size    = false;
 static bool lower          = false;
 static bool cclass         = false;
+static bool icon           = false;
 static int  chars_per_line = 16;
 
 int
@@ -24,6 +25,8 @@ main(int argc, char **argv)
         lower = true;
       else if (strcmp(&argv[i][1], "class") == 0)
         cclass = true;
+      else if (strcmp(&argv[i][1], "icon") == 0)
+        icon = true;
       else if (strcmp(&argv[i][1], "chars_per_line") == 0) {
         ++i;
 
@@ -90,20 +93,44 @@ process_file(const std::string &fileName)
 
   //---
 
-  std::cout << "#ifndef " << fileName2 << "_pixmap_H" << std::endl;
-  std::cout << "#define " << fileName2 << "_pixmap_H" << std::endl;
-  std::cout << std::endl;
+  if (icon) {
+    std::cout << "#ifndef CIcon_" << fileName2 << "_H" << std::endl;
+    std::cout << "#define CIcon_" << fileName2 << "_H" << std::endl;
+    std::cout << std::endl;
+  }
+  else {
+    std::cout << "#ifndef " << fileName2 << "_pixmap_H" << std::endl;
+    std::cout << "#define " << fileName2 << "_pixmap_H" << std::endl;
+    std::cout << std::endl;
+  }
 
-  if (cclass) {
+  if      (cclass) {
     std::cout << "#include <CQPixmapCache.h>" << std::endl;
     std::cout << std::endl;
 
     std::cout << "class " << fileName2 << "_pixmap {" << std::endl;
   }
+  else if (icon) {
+    std::cout << "class CIcon_" << fileName2 << " {" << std::endl;
+  }
 
   std::string indent, indent1;
 
-  if (! cclass) {
+  if      (cclass) {
+    indent  = "  ";
+    indent1 = "    ";
+
+    std::cout << " private:" << std::endl;
+    std::cout << "  uchar data_[" << file_size << "] = {" << std::endl << indent1;
+  }
+  else if (icon) {
+    indent  = "  ";
+    indent1 = "    ";
+
+    std::cout << " private:" << std::endl;
+    std::cout << "  uchar data_[" << file_size << "] = {" << std::endl << indent1;
+  }
+  else {
     if (! lower)
       std::cout << "#define " << fileName2 << "_DATA_LEN  " << file_size << std::endl;
     else
@@ -117,13 +144,6 @@ process_file(const std::string &fileName)
     else
       std::cout << "uchar " << fileName1 << "_data[" << fileName2 <<
                    "_data_len" << (encode_size ? " + 16" : "") << "] = {" << std::endl;
-  }
-  else {
-    indent  = "  ";
-    indent1 = "    ";
-
-    std::cout << " private:" << std::endl;
-    std::cout << "  uchar data_[" << file_size << "] = {" << std::endl << indent1;
   }
 
   if (encode_size) {
@@ -160,15 +180,54 @@ process_file(const std::string &fileName)
   if (pos > 0)
     std::cout << std::endl;
 
-  std::cout << indent << "};" << std::endl;
+  std::cout << "};" << std::endl;
 
-  if (cclass) {
+  if      (cclass) {
     std::cout << std::endl;
     std::cout << " public:" << std::endl;
     std::cout << "  " << fileName2 << "_pixmap() {" << std::endl;
     std::cout << "    CQPixmapCache::instance()->addData(\"" << fileName2 << "\", data_, " <<
                  file_size << ");" << std::endl;
     std::cout << "  }" << std::endl;
+  }
+  else if (icon) {
+    std::cout << std::endl;
+    std::cout << " public:" << std::endl;
+    std::cout << "  static CIcon_" << fileName2 << " *instance() {" << std::endl;
+    std::cout << "    static CIcon_" << fileName2 << " *inst;" << std::endl;
+    std::cout << std::endl;
+    std::cout << "    if (! inst)" << std::endl;
+    std::cout << "      inst = new CIcon_" << fileName2 << ";" << std::endl;
+    std::cout << std::endl;
+    std::cout << "    return inst;" << std::endl;
+    std::cout << "  }" << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "  static QIcon icon() {" << std::endl;
+    std::cout << "    return instance()->getIcon();" << std::endl;
+    std::cout << "  }" << std::endl;
+    std::cout << std::endl;
+
+    std::cout << " private:" << std::endl;
+    std::cout << "  CIcon_" << fileName2 << "() { }" << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "  QIcon getIcon() const {" << std::endl;
+    std::cout << "    if (! pixmap_) {" << std::endl;
+    std::cout << "      auto th = const_cast<CIcon_" << fileName2 << " *>(this);" << std::endl;
+    std::cout << std::endl;
+    std::cout << "      th->pixmap_ = new QPixmap;" << std::endl;
+    std::cout << std::endl;
+    std::cout << "      th->pixmap_->loadFromData(data_, 45191);" << std::endl;
+    std::cout << "    }" << std::endl;
+    std::cout << std::endl;
+    std::cout << "    return QIcon(*pixmap_);" << std::endl;
+    std::cout << "  }" << std::endl;
+    std::cout << std::endl;
+
+    std::cout << " private:" << std::endl;
+    std::cout << "  QPixmap *pixmap_ { nullptr };" << std::endl;
+    std::cout << "};" << std::endl;
   }
 
   if (cclass) {
