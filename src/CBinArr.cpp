@@ -9,6 +9,7 @@ static void process_file(const std::string &fileName);
 static bool encode_size    = false;
 static bool lower          = false;
 static bool cclass         = false;
+static bool qsvg           = false;
 static bool icon           = false;
 static int  chars_per_line = 16;
 
@@ -27,6 +28,8 @@ main(int argc, char **argv)
         cclass = true;
       else if (strcmp(&argv[i][1], "icon") == 0)
         icon = true;
+      else if (strcmp(&argv[i][1], "qsvg") == 0)
+        qsvg = true;
       else if (strcmp(&argv[i][1], "chars_per_line") == 0) {
         ++i;
 
@@ -34,7 +37,7 @@ main(int argc, char **argv)
           chars_per_line = atoi(argv[i]);
       }
       else
-        std::cerr << "Invalid option \'" << argv[i] << "\'" << std::endl;
+        std::cerr << "Invalid option \'" << argv[i] << "\'\n";
     }
     else
       files.push_back(argv[i]);
@@ -44,7 +47,7 @@ main(int argc, char **argv)
 
   if (num_files == 0) {
     std::cerr << "Usage: CBinArr [-encode_size] [-lower] [-class] [-chars_per_line <n>] "
-                 "<file> ..." << std::endl;
+                 "<file> ...\n";
     exit(1);
   }
 
@@ -94,24 +97,36 @@ process_file(const std::string &fileName)
   //---
 
   if (icon) {
-    std::cout << "#ifndef CIcon_" << fileName2 << "_H" << std::endl;
-    std::cout << "#define CIcon_" << fileName2 << "_H" << std::endl;
-    std::cout << std::endl;
+    std::cout << "#ifndef CIcon_" << fileName2 << "_H\n";
+    std::cout << "#define CIcon_" << fileName2 << "_H\n";
+    std::cout << "\n";
+  }
+  else if (qsvg) {
+    std::cout << "#ifndef " << fileName2 << "_SVG_H\n";
+    std::cout << "#define " << fileName2 << "_SVG_H\n";
+    std::cout << "\n";
   }
   else {
-    std::cout << "#ifndef " << fileName2 << "_pixmap_H" << std::endl;
-    std::cout << "#define " << fileName2 << "_pixmap_H" << std::endl;
-    std::cout << std::endl;
+    std::cout << "#ifndef " << fileName2 << "_pixmap_H\n";
+    std::cout << "#define " << fileName2 << "_pixmap_H\n";
+    std::cout << "\n";
   }
 
   if      (cclass) {
-    std::cout << "#include <CQPixmapCache.h>" << std::endl;
-    std::cout << std::endl;
+    std::cout << "#include <CQPixmapCache.h>\n";
+    std::cout << "\n";
 
-    std::cout << "class " << fileName2 << "_pixmap {" << std::endl;
+    std::cout << "class " << fileName2 << "_pixmap {\n";
+  }
+  else if (qsvg) {
+    std::cout << "#include <QSvgRenderer>\n";
+    std::cout << "#include <QImage>\n";
+    std::cout << "\n";
+
+    std::cout << "class " << fileName2 << "_SVG {\n";
   }
   else if (icon) {
-    std::cout << "class CIcon_" << fileName2 << " {" << std::endl;
+    std::cout << "class CIcon_" << fileName2 << " {\n";
   }
 
   std::string indent, indent1;
@@ -120,30 +135,37 @@ process_file(const std::string &fileName)
     indent  = "  ";
     indent1 = "    ";
 
-    std::cout << " private:" << std::endl;
-    std::cout << "  uchar data_[" << file_size << "] = {" << std::endl << indent1;
+    std::cout << " private:\n";
+    std::cout << "  uchar data_[" << file_size << "] = {\n" << indent1;
+  }
+  else if (qsvg) {
+    indent  = "  ";
+    indent1 = "    ";
+
+    std::cout << " private:\n";
+    std::cout << "  uchar data_[" << file_size << "] = {\n" << indent1;
   }
   else if (icon) {
     indent  = "  ";
     indent1 = "    ";
 
-    std::cout << " private:" << std::endl;
-    std::cout << "  uchar data_[" << file_size << "] = {" << std::endl << indent1;
+    std::cout << " private:\n";
+    std::cout << "  uchar data_[" << file_size << "] = {\n" << indent1;
   }
   else {
     if (! lower)
-      std::cout << "#define " << fileName2 << "_DATA_LEN  " << file_size << std::endl;
+      std::cout << "#define " << fileName2 << "_DATA_LEN  " << file_size << "\n";
     else
-      std::cout << "#define " << fileName2 << "_data_len  " << file_size << std::endl;
+      std::cout << "#define " << fileName2 << "_data_len  " << file_size << "\n";
 
-    std::cout << std::endl;
+    std::cout << "\n";
 
     if (! lower)
       std::cout << "uchar " << fileName1 << "_data[" << fileName2 <<
-                   "_DATA_LEN" << (encode_size ? " + 16" : "") << "] = {" << std::endl;
+                   "_DATA_LEN" << (encode_size ? " + 16" : "") << "] = {\n";
     else
       std::cout << "uchar " << fileName1 << "_data[" << fileName2 <<
-                   "_data_len" << (encode_size ? " + 16" : "") << "] = {" << std::endl;
+                   "_data_len" << (encode_size ? " + 16" : "") << "] = {\n";
   }
 
   if (encode_size) {
@@ -154,7 +176,7 @@ process_file(const std::string &fileName)
     for (int i = 0; i < 16; i++)
       CStrUtil::printf("0x%02x,", length_string[i] & 0xFF);
 
-    std::cout << std::endl;
+    std::cout << "\n";
   }
 
   int pos = 0;
@@ -169,7 +191,7 @@ process_file(const std::string &fileName)
     if (pos == chars_per_line) {
       pos = 0;
 
-      std::cout << std::endl << indent1;
+      std::cout << "\n" << indent1;
     }
 
     c = fgetc(fp);
@@ -178,64 +200,91 @@ process_file(const std::string &fileName)
   fclose(fp);
 
   if (pos > 0)
-    std::cout << std::endl;
+    std::cout << "\n";
 
-  std::cout << "};" << std::endl;
+  std::cout << "  };\n";
 
   if      (cclass) {
-    std::cout << std::endl;
-    std::cout << " public:" << std::endl;
-    std::cout << "  " << fileName2 << "_pixmap() {" << std::endl;
+    std::cout << "\n";
+    std::cout << " public:\n";
+    std::cout << "  " << fileName2 << "_pixmap() {\n";
     std::cout << "    CQPixmapCache::instance()->addData(\"" << fileName2 << "\", data_, " <<
-                 file_size << ");" << std::endl;
-    std::cout << "  }" << std::endl;
+                 file_size << ");\n";
+    std::cout << "  }\n";
+  }
+  else if (qsvg) {
+    std::cout << "\n";
+    std::cout << " public:\n";
+    std::cout << "  " << fileName2 << "_SVG() { }\n";
+    std::cout << "\n";
+    std::cout << "  QImage image(int w, int h) {\n";
+    std::cout << "    if (image_.isNull() || image_.width() == w || image_.height() == h) {\n";
+    std::cout << "      QSvgRenderer renderer(QByteArray((char *) data_, " << file_size << "));\n";
+    std::cout << "\n";
+    std::cout << "      image_ = QImage(w, h, QImage::Format_ARGB32);\n";
+    std::cout << "      image_.fill(0);\n";
+    std::cout << "\n";
+    std::cout << "      QPainter painter(&image_);\n";
+    std::cout << "      renderer.render(&painter);\n";
+    std::cout << "    }\n";
+    std::cout << "\n";
+    std::cout << "    return image_;\n";
+    std::cout << "  }\n";
+    std::cout << "\n";
+    std::cout << " private:\n";
+    std::cout << "  QImage image_;\n";
+    std::cout << "};\n";
   }
   else if (icon) {
-    std::cout << std::endl;
-    std::cout << " public:" << std::endl;
-    std::cout << "  static CIcon_" << fileName2 << " *instance() {" << std::endl;
-    std::cout << "    static CIcon_" << fileName2 << " *inst;" << std::endl;
-    std::cout << std::endl;
-    std::cout << "    if (! inst)" << std::endl;
-    std::cout << "      inst = new CIcon_" << fileName2 << ";" << std::endl;
-    std::cout << std::endl;
-    std::cout << "    return inst;" << std::endl;
-    std::cout << "  }" << std::endl;
-    std::cout << std::endl;
+    std::cout << "\n";
+    std::cout << " public:\n";
+    std::cout << "  static CIcon_" << fileName2 << " *instance() {\n";
+    std::cout << "    static CIcon_" << fileName2 << " *inst;\n";
+    std::cout << "\n";
+    std::cout << "    if (! inst)\n";
+    std::cout << "      inst = new CIcon_" << fileName2 << ";\n";
+    std::cout << "\n";
+    std::cout << "    return inst;\n";
+    std::cout << "  }\n";
+    std::cout << "\n";
 
-    std::cout << "  static QIcon icon() {" << std::endl;
-    std::cout << "    return instance()->getIcon();" << std::endl;
-    std::cout << "  }" << std::endl;
-    std::cout << std::endl;
+    std::cout << "  static QIcon icon() {\n";
+    std::cout << "    return instance()->getIcon();\n";
+    std::cout << "  }\n";
+    std::cout << "\n";
 
-    std::cout << " private:" << std::endl;
-    std::cout << "  CIcon_" << fileName2 << "() { }" << std::endl;
-    std::cout << std::endl;
+    std::cout << " private:\n";
+    std::cout << "  CIcon_" << fileName2 << "() { }\n";
+    std::cout << "\n";
 
-    std::cout << "  QIcon getIcon() const {" << std::endl;
-    std::cout << "    if (! pixmap_) {" << std::endl;
-    std::cout << "      auto th = const_cast<CIcon_" << fileName2 << " *>(this);" << std::endl;
-    std::cout << std::endl;
-    std::cout << "      th->pixmap_ = new QPixmap;" << std::endl;
-    std::cout << std::endl;
-    std::cout << "      th->pixmap_->loadFromData(data_, 45191);" << std::endl;
-    std::cout << "    }" << std::endl;
-    std::cout << std::endl;
-    std::cout << "    return QIcon(*pixmap_);" << std::endl;
-    std::cout << "  }" << std::endl;
-    std::cout << std::endl;
+    std::cout << "  QIcon getIcon() const {\n";
+    std::cout << "    if (! pixmap_) {\n";
+    std::cout << "      auto th = const_cast<CIcon_" << fileName2 << " *>(this);\n";
+    std::cout << "\n";
+    std::cout << "      th->pixmap_ = new QPixmap;\n";
+    std::cout << "\n";
+    std::cout << "      th->pixmap_->loadFromData(data_, 45191);\n";
+    std::cout << "    }\n";
+    std::cout << "\n";
+    std::cout << "    return QIcon(*pixmap_);\n";
+    std::cout << "  }\n";
+    std::cout << "\n";
 
-    std::cout << " private:" << std::endl;
-    std::cout << "  QPixmap *pixmap_ { nullptr };" << std::endl;
-    std::cout << "};" << std::endl;
+    std::cout << " private:\n";
+    std::cout << "  QPixmap *pixmap_ { nullptr };\n";
+    std::cout << "};\n";
   }
 
-  if (cclass) {
-    std::cout << "};" << std::endl;
-    std::cout << std::endl;
-    std::cout << "static " << fileName2 << "_pixmap s_" << fileName2 << "_pixmap;" << std::endl;
+  if      (cclass) {
+    std::cout << "};\n";
+    std::cout << "\n";
+    std::cout << "static " << fileName2 << "_pixmap s_" << fileName2 << "_pixmap;\n";
+  }
+  else if (qsvg) {
+    std::cout << "\n";
+    std::cout << "static " << fileName2 << "_SVG s_" << fileName2 << "_SVG;\n";
   }
 
-  std::cout << std::endl;
-  std::cout << "#endif" << std::endl;
+  std::cout << "\n";
+  std::cout << "#endif\n";
 }
