@@ -120,6 +120,7 @@ process_file(const std::string &fileName)
   }
   else if (qsvg) {
     std::cout << "#include <QSvgRenderer>\n";
+    std::cout << "#include <QPainter>\n";
     std::cout << "#include <QImage>\n";
     std::cout << "\n";
 
