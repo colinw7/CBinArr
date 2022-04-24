@@ -43,7 +43,7 @@ main(int argc, char **argv)
       files.push_back(argv[i]);
   }
 
-  uint num_files = files.size();
+  auto num_files = files.size();
 
   if (num_files == 0) {
     std::cerr << "Usage: CBinArr [-encode_size] [-lower] [-class] [-chars_per_line <n>] "
@@ -67,7 +67,7 @@ process_file(const std::string &fileName)
 
   fseek(fp, 0, SEEK_END);
 
-  int file_size = ftell(fp);
+  auto file_size = ftell(fp);
 
   fseek(fp, 0, SEEK_SET);
 
@@ -75,9 +75,9 @@ process_file(const std::string &fileName)
 
   std::string fileName1 = fileName;
 
-  uint len1 = fileName1.size();
+  auto len1 = fileName1.size();
 
-  for (uint i = 0; i < len1; ++i) {
+  for (size_t i = 0; i < len1; ++i) {
     if (fileName1[i] == '.') {
       fileName1 = fileName1.substr(0, i);
       break;
@@ -91,7 +91,7 @@ process_file(const std::string &fileName)
   if (! lower) {
     for (uint i = 0; i < fileName2.size(); ++i)
       if (islower(fileName2[i]))
-        fileName2[i] = toupper(fileName2[i]);
+        fileName2[i] = char(std::toupper(fileName2[i]));
   }
 
   //---
@@ -172,7 +172,7 @@ process_file(const std::string &fileName)
   if (encode_size) {
     char length_string[17];
 
-    sprintf(length_string, "%d", file_size);
+    sprintf(length_string, "%ld", file_size);
 
     for (int i = 0; i < 16; i++)
       CStrUtil::printf("0x%02x,", length_string[i] & 0xFF);
@@ -220,7 +220,7 @@ process_file(const std::string &fileName)
     std::cout << "\n";
     std::cout << "  QImage image(int w, int h) {\n";
     std::cout << "    if (image_.isNull() || image_.width() == w || image_.height() == h) {\n";
-    std::cout << "      QSvgRenderer renderer(QByteArray((char *) data_, " << file_size << "));\n";
+    std::cout << "      QSvgRenderer renderer(QByteArray(reinterpret_cast<char *>(data_), " << file_size << "));\n";
     std::cout << "\n";
     std::cout << "      image_ = QImage(w, h, QImage::Format_ARGB32);\n";
     std::cout << "      image_.fill(0);\n";
