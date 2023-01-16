@@ -219,7 +219,7 @@ process_file(const std::string &fileName)
     std::cout << "  " << fileName2 << "_SVG() { }\n";
     std::cout << "\n";
     std::cout << "  QImage image(int w, int h) {\n";
-    std::cout << "    if (image_.isNull() || image_.width() == w || image_.height() == h) {\n";
+    std::cout << "    if (image_.isNull() || image_.width() != w || image_.height() != h) {\n";
     std::cout << "      QSvgRenderer renderer(QByteArray(reinterpret_cast<char *>(data_), " << file_size << "));\n";
     std::cout << "\n";
     std::cout << "      image_ = QImage(w, h, QImage::Format_ARGB32);\n";
